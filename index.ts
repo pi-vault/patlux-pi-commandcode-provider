@@ -1,6 +1,12 @@
 /**
  * Command Code provider for pi.
+ *
  * Connects pi to Command Code's API (https://api.commandcode.ai/alpha/generate).
+ * Requires a Command Code API key. Set via:
+ *   1. COMMANDCODE_API_KEY environment variable, or
+ *   2. `~/.commandcode/auth.json` or `~/.pi/agent/auth.json`
+ *
+ * Models: deepseek-v4-pro, deepseek-v4-flash, claude-sonnet-4-6, claude-opus-4-7, etc.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -51,6 +57,29 @@ const MODELS = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function getApiKey(): string | undefined {
+  const env = process.env.COMMANDCODE_API_KEY;
+  if (env) return env;
+
+  const authPaths = [
+    join(homedir(), ".commandcode", "auth.json"),
+    join(homedir(), ".pi", "agent", "auth.json"),
+  ];
+
+  for (const authPath of authPaths) {
+    try {
+      if (!existsSync(authPath)) continue;
+      const auth = JSON.parse(readFileSync(authPath, "utf-8"));
+      if (typeof auth.apiKey === "string" && auth.apiKey) return auth.apiKey;
+      if (typeof auth.commandcode === "string" && auth.commandcode) return auth.commandcode;
+    } catch {
+      // ignore malformed/missing auth files
+    }
+  }
+
+  return undefined;
+}
 
 function toJsonSchema(schema: any): any {
   if (!schema) return {};
@@ -152,12 +181,12 @@ function streamCommandCode(
   const stream = createAssistantMessageEventStream();
 
   (async () => {
-    const apiKey = options?.apiKey ?? process.env.COMMANDCODE_API_KEY;
+    const apiKey = options?.apiKey ?? getApiKey();
     if (!apiKey) {
       const msg: AssistantMessage = {
         role: "assistant", content: [], api: model.api, provider: model.provider, model: model.id,
         usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
-        stopReason: "error", errorMessage: "No Command Code API key. Set COMMANDCODE_API_KEY env var.",
+        stopReason: "error", errorMessage: "No Command Code API key. Set COMMANDCODE_API_KEY env var or configure ~/.commandcode/auth.json or ~/.pi/agent/auth.json.",
         timestamp: Date.now(),
       };
       stream.push({ type: "error", reason: "error", error: msg });
