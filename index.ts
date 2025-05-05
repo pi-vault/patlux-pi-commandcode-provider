@@ -276,6 +276,11 @@ function streamCommandCode(
         signal: controller.signal,
       }));
 
+      await raceAbort(Promise.resolve(options?.onResponse?.({
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+      }, model)));
+
       if (!response.ok) {
         const errBody = await raceAbort(response.text().catch(() => ""));
         throw new Error(`Command Code API error ${response.status}: ${errBody.slice(0, 500)}`);
