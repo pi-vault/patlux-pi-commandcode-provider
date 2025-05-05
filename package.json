@@ -10,6 +10,13 @@
     "provider"
   ],
   "license": "MIT",
+  "scripts": {
+    "test": "npx tsx tests/test-pure-functions.ts && npx tsx tests/test-abort.ts && npx tsx tests/test-stream.ts",
+    "test:unit": "npx tsx tests/test-pure-functions.ts",
+    "test:abort": "npx tsx tests/test-abort.ts",
+    "test:stream": "npx tsx tests/test-stream.ts",
+    "test:smoke": "node tests/test-smoke.mjs"
+  },
   "pi": {
     "extensions": [
       "./index.ts"
