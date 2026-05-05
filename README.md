@@ -50,6 +50,8 @@ In pi, run:
 
 Then select **Command Code** from the provider list.
 
+<img width="1520" height="554" alt="image" src="https://github.com/user-attachments/assets/071e929a-6f49-4803-bfec-7a31368fb12a" />
+
 This opens Command Code in your browser and stores the returned API key in pi's auth file. If the browser shows "Copy your API key" because automatic transfer failed, copy that key and paste it into the pi terminal prompt.
 
 > Note: `/login commandcode` is not supported by pi currently; use interactive `/login` and select Command Code.
