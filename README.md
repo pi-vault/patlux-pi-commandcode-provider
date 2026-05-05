@@ -2,7 +2,11 @@
 
 A [pi](https://github.com/badlogic/pi-mono) custom provider that connects pi to the [Command Code](https://commandcode.ai) API.
 
+> **Disclaimer:** This is an unofficial, community-maintained package. I am not affiliated with, endorsed by, or connected to Command Code in any way. This provider simply forwards requests to the public Command Code API using your own API key.
+
 > **Note:** This package only provides a model *provider*. It does **not** include an API key. You must bring your own Command Code API key or subscription.
+
+> 💰 **Current offer:** Command Code offers [4× usage of DeepSeek V4](https://commandcode.ai/docs/resources/pricing-limits#deepseek-v4-pro-4x-usage) (Pro and Flash) at no extra cost.
 
 ## Models
 
@@ -12,7 +16,7 @@ A [pi](https://github.com/badlogic/pi-mono) custom provider that connects pi to 
 |----------|--------|
 | **Anthropic** | Claude Opus 4.7, Claude Opus 4.6, Claude Sonnet 4.6, Claude Haiku 4.5 |
 | **OpenAI** | GPT-5.5, GPT-5.4, GPT-5.3 Codex, GPT-5.4 Mini |
-| **Open-source** | DeepSeek V4 Pro, DeepSeek V4 Flash, Kimi K2.6, Kimi K2.5, GLM-5.1, GLM-5, MiniMax M2.7, MiniMax M2.5, Qwen 3.6 Max, Qwen 3.6 Plus |
+| **Open-source** | DeepSeek V4, DeepSeek V4 Pro, DeepSeek V4 Flash, Kimi K2.6, Kimi K2.5, GLM-5.1, GLM-5, MiniMax M2.7, MiniMax M2.5, Qwen 3.6 Max, Qwen 3.6 Plus |
 
 ## Install
 
