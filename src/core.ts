@@ -129,7 +129,7 @@ export function createStreamCommandCode(deps: CoreDependencies) {
           usage: defaultUsage(),
           stopReason: "error",
           errorMessage:
-            "No Command Code API key. Run /login commandcode, set COMMANDCODE_API_KEY env var, or configure ~/.commandcode/auth.json or ~/.pi/agent/auth.json.",
+            "No Command Code API key. Run /login and select Command Code, set COMMANDCODE_API_KEY env var, or configure ~/.commandcode/auth.json or ~/.pi/agent/auth.json.",
           timestamp: now(),
         }
         stream.push({ type: "error", reason: "error", error: msg })

@@ -40,19 +40,33 @@ Then reload pi:
 
 Set your Command Code API key using one of these methods:
 
-### 1. Environment variable
+### 1. Browser login (recommended)
 
-```sh
-export COMMANDCODE_API_KEY="cc-..."
+In pi, run:
+
+```txt
+/login
 ```
 
-### 2. Auth file (recommended)
+Then select **Command Code** from the provider list.
+
+This opens Command Code in your browser and stores the returned API key in pi's auth file. If the browser shows "Copy your API key" because automatic transfer failed, copy that key and paste it into the pi terminal prompt.
+
+> Note: `/login commandcode` is not supported by pi currently; use interactive `/login` and select Command Code.
+
+### 2. Environment variable
+
+```sh
+export COMMANDCODE_API_KEY="user_..."
+```
+
+### 3. Auth file
 
 Create `~/.commandcode/auth.json`:
 
 ```json
 {
-  "apiKey": "cc-..."
+  "apiKey": "user_..."
 }
 ```
 
@@ -60,7 +74,7 @@ Or use pi's auth file at `~/.pi/agent/auth.json`:
 
 ```json
 {
-  "commandcode": "cc-..."
+  "commandcode": "user_..."
 }
 ```
 
@@ -69,7 +83,7 @@ Or use pi's auth file at `~/.pi/agent/auth.json`:
 After installing and setting your API key, select a Command Code model in pi:
 
 ```txt
-/model claude-sonnet-4-6
+/model deepseek/deepseek-v4-flash
 ```
 
 Any query will then use the Command Code API. You can list available models:

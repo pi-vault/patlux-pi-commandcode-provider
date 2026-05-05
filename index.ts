@@ -4,7 +4,7 @@
  * Connects pi to Command Code's API (https://api.commandcode.ai/alpha/generate).
  *
  * Authentication (pick one):
- *   1. Run `/login commandcode` — opens browser to commandcode.ai, auto-stores API key
+ *   1. Run `/login`, then select Command Code — opens browser to commandcode.ai, auto-stores API key
  *   2. Set COMMANDCODE_API_KEY environment variable
  *   3. Place API key in `~/.commandcode/auth.json` or `~/.pi/agent/auth.json`
  *      as {"apiKey": "user_..."} or {"commandcode": "user_..."}

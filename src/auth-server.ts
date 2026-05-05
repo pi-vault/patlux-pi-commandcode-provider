@@ -1,12 +1,15 @@
 /**
  * Local HTTP callback server for the Command Code browser auth flow.
  *
- * Starts a one-shot server on a random port. The Command Code Studio
- * website POSTs the user's API key to /callback after they authenticate.
+ * Starts a one-shot server on a CLI-compatible localhost port. The Command Code
+ * Studio website POSTs the user's API key to /callback after they authenticate.
  */
 
 import { createServer, type Server } from "node:http"
 import type { AddressInfo } from "node:net"
+
+const DEFAULT_PORT = 5959
+const DEFAULT_PORT_RANGE = 10
 
 export interface AuthCallback {
   apiKey: string
@@ -22,15 +25,65 @@ export interface AuthServer {
   waitForCallback: Promise<AuthCallback>
 }
 
+export interface AuthServerOptions {
+  startPort?: number
+  portRange?: number
+}
+
+function listenOnAvailablePort(
+  server: Server,
+  startPort = DEFAULT_PORT,
+  range = DEFAULT_PORT_RANGE,
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let offset = 0
+
+    const tryListen = () => {
+      const useFallbackPort = startPort === 0 || offset >= range
+      const port = useFallbackPort ? 0 : startPort + offset
+
+      const onError = (err: NodeJS.ErrnoException) => {
+        server.off("listening", onListening)
+        if (err.code === "EADDRINUSE" && !useFallbackPort) {
+          offset += 1
+          tryListen()
+          return
+        }
+        reject(err)
+      }
+
+      const onListening = () => {
+        server.off("error", onError)
+        const address = server.address() as AddressInfo
+        resolve(address.port)
+      }
+
+      server.once("error", onError)
+      server.once("listening", onListening)
+      server.listen(port, "127.0.0.1")
+    }
+
+    tryListen()
+  })
+}
+
+function closeServer(server: Server) {
+  server.close((err: NodeJS.ErrnoException | undefined) => {
+    if (err && err.code !== "ERR_SERVER_NOT_RUNNING") {
+      // There is nowhere useful to report this during auth cleanup.
+    }
+  })
+}
+
 /**
  * Start a local HTTP server that listens for the Command Code Studio
  * to POST the API key after the user authenticates in their browser.
  *
  * The server accepts exactly one valid POST to /callback and then closes.
  */
-export function startAuthServer(): Promise<AuthServer> {
-  let resolveCallback: (value: AuthCallback) => void
-  let rejectCallback: (error: Error) => void
+export async function startAuthServer(options: AuthServerOptions = {}): Promise<AuthServer> {
+  let resolveCallback!: (value: AuthCallback) => void
+  let rejectCallback!: (error: Error) => void
 
   const waitForCallback = new Promise<AuthCallback>((resolve, reject) => {
     resolveCallback = resolve
@@ -38,7 +91,7 @@ export function startAuthServer(): Promise<AuthServer> {
   })
 
   const server = createServer((req, res) => {
-    // CORS: allow requests from Command Code domains and localhost for dev
+    // CORS: allow requests from Command Code domains and localhost for dev.
     const origin = req.headers.origin || ""
     const allowedOrigins = [
       "http://localhost:3000",
@@ -46,13 +99,22 @@ export function startAuthServer(): Promise<AuthServer> {
       "https://commandcode.ai",
     ]
     const responseOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
+    const requestedHeaders = req.headers["access-control-request-headers"]
 
     res.setHeader("Access-Control-Allow-Origin", responseOrigin)
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      typeof requestedHeaders === "string" && requestedHeaders.length > 0
+        ? requestedHeaders
+        : "Content-Type",
+    )
+    // Chrome's Private Network Access preflight may require this for an HTTPS
+    // page posting to a localhost HTTP callback.
+    res.setHeader("Access-Control-Allow-Private-Network", "true")
     res.setHeader("Content-Type", "application/json")
 
-    // Handle CORS preflight
+    // Handle CORS preflight.
     if (req.method === "OPTIONS") {
       res.writeHead(204)
       res.end()
@@ -98,7 +160,7 @@ export function startAuthServer(): Promise<AuthServer> {
           } else {
             rejectCallback(new Error(description || String(parsed.error)))
           }
-          server.close()
+          closeServer(server)
           return
         }
 
@@ -123,7 +185,7 @@ export function startAuthServer(): Promise<AuthServer> {
         res.end(JSON.stringify({ success: true }))
 
         resolveCallback({ apiKey, state, userId, userName, keyName })
-        server.close()
+        closeServer(server)
       } catch {
         res.writeHead(400)
         res.end(JSON.stringify({ success: false, error: "Invalid JSON" }))
@@ -136,14 +198,17 @@ export function startAuthServer(): Promise<AuthServer> {
     })
   })
 
-  return new Promise((resolve) => {
-    server.on("error", (err: NodeJS.ErrnoException) => {
-      rejectCallback(new Error(`Failed to start auth server: ${err.message}`))
-    })
-
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address() as AddressInfo
-      resolve({ server, port: address.port, waitForCallback })
-    })
-  })
+  try {
+    const port = await listenOnAvailablePort(
+      server,
+      options.startPort ?? DEFAULT_PORT,
+      options.portRange ?? DEFAULT_PORT_RANGE,
+    )
+    return { server, port, waitForCallback }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    const error = new Error(`Failed to start auth server: ${message}`)
+    rejectCallback(error)
+    throw error
+  }
 }
