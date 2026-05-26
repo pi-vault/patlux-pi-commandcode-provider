@@ -142,6 +142,7 @@ describe("streamCommandCode — successful streams", () => {
     server.mockResponse({
       type: "success",
       events: [
+        JSON.stringify({ type: "reasoning-start" }),
         JSON.stringify({ type: "reasoning-delta", text: "think" }),
         JSON.stringify({ type: "reasoning-end" }),
         JSON.stringify({ type: "text-delta", text: "Using tool" }),
@@ -244,7 +245,13 @@ describe("streamCommandCode — request serialization", () => {
     assert.equal(objectAt(body, ["params", "model"]), "deepseek/deepseek-v4-flash")
     assert.equal(objectAt(body, ["params", "stream"]), true)
     assert.equal(objectAt(body, ["params", "max_tokens"]), 500)
+    assert.equal(objectAt(body, ["params", "temperature"]), 0.3)
     assert.equal(objectAt(body, ["params", "system"]), "You are a test assistant.")
+    assert.equal(objectAt(body, ["memory"]), null)
+    assert.equal(objectAt(body, ["taste"]), null)
+    assert.equal(objectAt(body, ["skills"]), null)
+    assert.equal(objectAt(body, ["permissionMode"]), undefined)
+    assert.equal(objectAt(body, ["threadId"]), "00000000-0000-4000-8000-000000000000")
     assert.equal(
       objectAt(body, ["params", "messages", "1", "content", "0", "text"]),
       "first response",
@@ -253,8 +260,11 @@ describe("streamCommandCode — request serialization", () => {
 
     const headers = server.lastRequestHeaders()
     assert.equal(headers.authorization, "Bearer mock-key")
-    assert.equal(headers["x-command-code-version"], "0.24.1")
-    assert.equal(headers["x-session-id"], "00000000-0000-4000-8000-000000000000")
+    assert.equal(headers["x-command-code-version"], "0.27.2")
+    assert.equal(headers["x-project-slug"], "repo")
+    assert.equal(headers["x-taste-learning"], "true")
+    assert.equal(headers["x-co-flag"], "false")
+    assert.equal(headers["x-session-id"], undefined)
   })
 
   it("caps maxTokens and passes custom headers", async () => {
@@ -272,8 +282,24 @@ describe("streamCommandCode — request serialization", () => {
       }),
     )
 
-    assert.equal(objectAt(server.lastRequestBody(), ["params", "max_tokens"]), 200_000)
+    assert.equal(objectAt(server.lastRequestBody(), ["params", "max_tokens"]), 64_000)
     assert.equal(server.lastRequestHeaders()["x-custom"], "value")
+  })
+
+  it("caps default maxTokens by the selected model", async () => {
+    server.mockResponse({
+      type: "success",
+      events: [JSON.stringify({ type: "finish", finishReason: "stop" })],
+    })
+    const { streamCommandCode } = createTestDeps({ apiBase: server.baseUrl() })
+
+    await collectEvents(
+      streamCommandCode(makeModel({ maxTokens: 8_192 }), makeContext(), {
+        apiKey: "mock-key",
+      }),
+    )
+
+    assert.equal(objectAt(server.lastRequestBody(), ["params", "max_tokens"]), 8_192)
   })
 
   it("runs onPayload and onResponse hooks", async () => {

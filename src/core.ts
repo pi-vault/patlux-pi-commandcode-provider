@@ -38,6 +38,9 @@ export * from "./converters.ts"
 export * from "./types.ts"
 
 export const DEFAULT_API_BASE = "https://api.commandcode.ai"
+export const COMMAND_CODE_CLI_VERSION = "0.27.2"
+
+const DEFAULT_GENERATE_MAX_TOKENS = 64_000
 
 function defaultUsage(): Usage {
   return {
@@ -75,6 +78,23 @@ function abortError(message = "The operation was aborted"): DOMException {
 function successStopReason(reason: TerminalReason): StopReason {
   if (reason === "length" || reason === "toolUse") return reason
   return "stop"
+}
+
+function generateMaxTokens(model: ModelLike, options?: StreamOptions): number {
+  return Math.min(
+    options?.maxTokens ?? model.maxTokens,
+    model.maxTokens,
+    DEFAULT_GENERATE_MAX_TOKENS,
+  )
+}
+
+export function projectSlugFromPath(pathName: string): string {
+  const slug = pathName
+    .toLowerCase()
+    .replace(/^[a-z]:/i, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return slug || "project"
 }
 
 export function createStreamCommandCode(deps: CoreDependencies) {
@@ -235,13 +255,23 @@ export function createStreamCommandCode(deps: CoreDependencies) {
             break
           }
 
+          case "reasoning-start": {
+            endTextBlock()
+            break
+          }
+
           case "reasoning-delta": {
+            endTextBlock()
             thinkingBlock.push(stringValue(event.text) ?? "")
             break
           }
 
           case "reasoning-end": {
             flushThinkingBlock()
+            break
+          }
+
+          case "tool-result": {
             break
           }
 
@@ -303,9 +333,12 @@ export function createStreamCommandCode(deps: CoreDependencies) {
       try {
         stream.push({ type: "start", partial: output })
 
+        const workingDir = cwd()
+        const threadId = uuid()
+
         let body: unknown = {
           config: {
-            workingDir: cwd(),
+            workingDir,
             date: new Date(now()).toISOString().split("T")[0],
             environment: getEnvironmentInfo(),
             structure: [],
@@ -315,18 +348,19 @@ export function createStreamCommandCode(deps: CoreDependencies) {
             gitStatus: "",
             recentCommits: [],
           },
-          memory: "",
-          taste: "",
+          memory: null,
+          taste: null,
           skills: null,
-          permissionMode: "standard",
           params: {
             model: model.id,
             messages: messagesToCC(context.messages),
             tools: toolsToJson(context.tools),
             system: context.systemPrompt ?? "",
-            max_tokens: Math.min(options?.maxTokens ?? model.maxTokens, 200_000),
+            max_tokens: generateMaxTokens(model, options),
+            temperature: 0.3,
             stream: true,
           },
+          threadId,
         }
 
         const nextBody = await raceAbort(
@@ -341,12 +375,11 @@ export function createStreamCommandCode(deps: CoreDependencies) {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${apiKey}`,
-              "x-command-code-version": "0.24.1",
+              "x-command-code-version": COMMAND_CODE_CLI_VERSION,
               "x-cli-environment": "production",
-              "x-project-slug": "pi-cc",
-              "x-taste-learning": "false",
+              "x-project-slug": projectSlugFromPath(workingDir),
+              "x-taste-learning": "true",
               "x-co-flag": "false",
-              "x-session-id": uuid(),
               ...options?.headers,
             },
             body: JSON.stringify(body),

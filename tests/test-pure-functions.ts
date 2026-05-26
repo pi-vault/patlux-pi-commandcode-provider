@@ -15,6 +15,7 @@ import {
   mapFinishReason,
   messagesToCC,
   parseStreamEventLine,
+  projectSlugFromPath,
   textContent,
   toJsonSchema,
   toolsToJson,
@@ -27,12 +28,13 @@ describe("getApiKey()", () => {
     assert.equal(getApiKey({ env: { COMMANDCODE_API_KEY: "env-key" }, authPaths: [] }), "env-key")
   })
 
-  it("reads apiKey, commandcode, and pi OAuth credential fields from explicit auth paths", () => {
+  it("reads apiKey, commandcode, pi OAuth, and official CLI credential fields", () => {
     const dir = mkdtempSync(join(tmpdir(), "cc-auth-"))
     try {
       const first = join(dir, "first.json")
       const second = join(dir, "second.json")
       const oauth = join(dir, "oauth.json")
+      const official = join(dir, "official.json")
       writeFileSync(first, JSON.stringify({ apiKey: "file-key" }))
       writeFileSync(second, JSON.stringify({ commandcode: "fallback-key" }))
       writeFileSync(
@@ -46,9 +48,19 @@ describe("getApiKey()", () => {
           },
         }),
       )
+      writeFileSync(
+        official,
+        JSON.stringify({
+          "command-code": {
+            type: "api",
+            key: "official-cli-key",
+          },
+        }),
+      )
       assert.equal(getApiKey({ env: {}, authPaths: [first, second] }), "file-key")
       assert.equal(getApiKey({ env: {}, authPaths: [second] }), "fallback-key")
       assert.equal(getApiKey({ env: {}, authPaths: [oauth] }), "oauth-access-key")
+      assert.equal(getApiKey({ env: {}, authPaths: [official] }), "official-cli-key")
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
@@ -75,6 +87,16 @@ describe("getApiKey()", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+})
+
+describe("projectSlugFromPath()", () => {
+  it("matches the official CLI-style slug from an absolute working directory", () => {
+    assert.equal(
+      projectSlugFromPath("/Users/patwoz/dev/Personal/pi/pi-commandcode-provider"),
+      "users-patwoz-dev-personal-pi-pi-commandcode-provider",
+    )
+    assert.equal(projectSlugFromPath("/repo"), "repo")
   })
 })
 

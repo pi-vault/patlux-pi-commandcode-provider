@@ -72,6 +72,17 @@ Create `~/.commandcode/auth.json`:
 }
 ```
 
+The official Command Code CLI auth shape is also supported:
+
+```json
+{
+  "command-code": {
+    "type": "api",
+    "key": "user_..."
+  }
+}
+```
+
 Or use pi's auth file at `~/.pi/agent/auth.json`:
 
 ```json

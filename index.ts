@@ -15,7 +15,7 @@
 import { calculateCost, createAssistantMessageEventStream } from "@mariozechner/pi-ai"
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
 
-import { createStreamCommandCode, DEFAULT_API_BASE } from "./src/core.ts"
+import { COMMAND_CODE_CLI_VERSION, createStreamCommandCode, DEFAULT_API_BASE } from "./src/core.ts"
 import { DEFAULT_MODELS_URL, fetchCommandCodeModels } from "./src/models.ts"
 import { getApiKey, login, refreshToken } from "./src/oauth.ts"
 
@@ -43,7 +43,7 @@ export default async function (pi: ExtensionAPI) {
     api: "commandcode-custom",
     streamSimple: streamCommandCode,
     headers: {
-      "x-command-code-version": "0.24.1",
+      "x-command-code-version": COMMAND_CODE_CLI_VERSION,
       "x-cli-environment": "production",
     },
     oauth: {

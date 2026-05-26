@@ -42,6 +42,16 @@ function defaultAuthPaths(home: string): string[] {
   return [join(home, ".commandcode", "auth.json"), join(home, ".pi", "agent", "auth.json")]
 }
 
+function apiKeyFromCredentialRecord(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined
+
+  const type = stringValue(value.type)
+  if (type === "api") return stringValue(value.key)
+  if (type === "oauth") return stringValue(value.access)
+
+  return stringValue(value.key) ?? stringValue(value.access)
+}
+
 export function getApiKey(
   options: {
     env?: NodeJS.ProcessEnv
@@ -61,18 +71,18 @@ export function getApiKey(
       const parsed: unknown = JSON.parse(readFileSync(authPath, "utf-8"))
       if (!isRecord(parsed)) continue
 
-      // Legacy: direct apiKey or commandcode field
+      // Legacy: direct apiKey or commandcode field.
       const apiKey = stringValue(parsed.apiKey)
       if (apiKey) return apiKey
       const commandcode = stringValue(parsed.commandcode)
       if (commandcode) return commandcode
 
-      // OAuth: pi stores OAuth credentials as {"commandcode": {"type":"oauth","access":"...","refresh":"...","expires":...}}
-      const providerKey = isRecord(parsed.commandcode) ? parsed.commandcode : undefined
-      if (providerKey && stringValue(providerKey.type) === "oauth") {
-        const access = stringValue(providerKey.access)
-        if (access) return access
-      }
+      // pi stores OAuth credentials as {"commandcode": {"type":"oauth","access":"..."}}.
+      // The official Command Code CLI stores API credentials under "command-code".
+      const providerKey =
+        apiKeyFromCredentialRecord(parsed.commandcode) ??
+        apiKeyFromCredentialRecord(parsed["command-code"])
+      if (providerKey) return providerKey
     } catch {
       // Ignore malformed or unreadable auth files.
     }
