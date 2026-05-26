@@ -172,7 +172,7 @@ export function createStreamCommandCode(deps: CoreDependencies) {
       let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
       let textBlock: TextContent | undefined
       let currentTextIdx = -1
-      let thinkingBlock: string[] = []
+      let thinkingIdx = -1
       let finished = false
 
       const abortUpstream = () => {
@@ -204,29 +204,18 @@ export function createStreamCommandCode(deps: CoreDependencies) {
         currentTextIdx = -1
       }
 
-      const flushThinkingBlock = () => {
-        if (thinkingBlock.length === 0) return
-        const thinkingText = thinkingBlock.join("")
-        thinkingBlock = []
-        output.content.push({ type: "thinking", thinking: thinkingText })
-        const idx = output.content.length - 1
-        stream.push({
-          type: "thinking_start",
-          contentIndex: idx,
-          partial: output,
-        })
-        stream.push({
-          type: "thinking_delta",
-          contentIndex: idx,
-          delta: thinkingText,
-          partial: output,
-        })
-        stream.push({
-          type: "thinking_end",
-          contentIndex: idx,
-          content: thinkingText,
-          partial: output,
-        })
+      const endThinking = () => {
+        if (thinkingIdx < 0) return
+        const tc = output.content[thinkingIdx]
+        if (tc && tc.type === "thinking") {
+          stream.push({
+            type: "thinking_end",
+            contentIndex: thinkingIdx,
+            content: (tc as { thinking: string }).thinking,
+            partial: output,
+          })
+        }
+        thinkingIdx = -1
       }
 
       const handleEvent = (event: unknown) => {
@@ -262,12 +251,32 @@ export function createStreamCommandCode(deps: CoreDependencies) {
 
           case "reasoning-delta": {
             endTextBlock()
-            thinkingBlock.push(stringValue(event.text) ?? "")
+            const delta = stringValue(event.text) ?? ""
+            if (thinkingIdx < 0) {
+              output.content.push({ type: "thinking", thinking: delta })
+              thinkingIdx = output.content.length - 1
+              stream.push({
+                type: "thinking_start",
+                contentIndex: thinkingIdx,
+                partial: output,
+              })
+            } else {
+              const tc = output.content[thinkingIdx]
+              if (tc && tc.type === "thinking") {
+                (tc as { thinking: string }).thinking += delta
+              }
+            }
+            stream.push({
+              type: "thinking_delta",
+              contentIndex: thinkingIdx,
+              delta,
+              partial: output,
+            })
             break
           }
 
           case "reasoning-end": {
-            flushThinkingBlock()
+            endThinking()
             break
           }
 
@@ -436,7 +445,7 @@ export function createStreamCommandCode(deps: CoreDependencies) {
         }
 
         endTextBlock()
-        flushThinkingBlock()
+        endThinking()
 
         stream.push({
           type: "done",
