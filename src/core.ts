@@ -18,6 +18,7 @@ import {
   recordOrEmpty,
   stringValue,
   toolsToJson,
+  systemPromptToText
 } from "./converters.ts"
 import type {
   AssistantMessageEventStreamLike,
@@ -131,8 +132,15 @@ export function createStreamCommandCode(deps: CoreDependencies) {
     const stream = deps.createStream()
 
     async function run() {
+      // OMP may pass the env-var name "COMMANDCODE_API_KEY" as the apiKey
+      // value instead of resolving it. Filter out this specific string.
+      const hostKey =
+        options?.apiKey && options.apiKey !== "COMMANDCODE_API_KEY"
+          ? options.apiKey
+          : undefined
+
       const apiKey =
-        options?.apiKey ??
+        hostKey ??
         getApiKey({
           env: deps.env,
           authPaths: deps.authPaths,
@@ -355,7 +363,7 @@ export function createStreamCommandCode(deps: CoreDependencies) {
             model: model.id,
             messages: messagesToCC(context.messages),
             tools: toolsToJson(context.tools),
-            system: context.systemPrompt ?? "",
+            system: systemPromptToText(context.systemPrompt),
             max_tokens: generateMaxTokens(model, options),
             temperature: 0.3,
             stream: true,

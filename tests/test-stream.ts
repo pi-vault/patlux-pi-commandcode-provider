@@ -302,6 +302,29 @@ describe("streamCommandCode — request serialization", () => {
     assert.equal(objectAt(server.lastRequestBody(), ["params", "max_tokens"]), 8_192)
   })
 
+  it("serializes OMP system prompt arrays as a string", async () => {
+    server.mockResponse({
+      type: "success",
+      events: [JSON.stringify({ type: "finish", finishReason: "stop" })],
+    })
+    const { streamCommandCode } = createTestDeps({ apiBase: server.baseUrl() })
+
+    await collectEvents(
+      streamCommandCode(
+        makeModel(),
+        makeContext({
+          systemPrompt: ["You are a test assistant.", "Use concise answers."] as unknown as string,
+        }),
+        { apiKey: "mock-key" },
+      ),
+    )
+
+    assert.equal(
+      objectAt(server.lastRequestBody(), ["params", "system"]),
+      "You are a test assistant.\n\nUse concise answers.",
+    )
+  })
+
   it("runs onPayload and onResponse hooks", async () => {
     server.mockResponse({
       type: "success",
