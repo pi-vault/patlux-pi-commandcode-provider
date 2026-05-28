@@ -39,7 +39,7 @@ export * from "./converters.ts"
 export * from "./types.ts"
 
 export const DEFAULT_API_BASE = "https://api.commandcode.ai"
-export const COMMAND_CODE_CLI_VERSION = "0.27.2"
+export const COMMAND_CODE_CLI_VERSION = "0.29.0"
 
 const DEFAULT_GENERATE_MAX_TOKENS = 64_000
 
