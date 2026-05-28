@@ -18,6 +18,7 @@ import {
   recordOrEmpty,
   stringValue,
   toolsToJson,
+  systemPromptToText,
 } from "./converters.ts"
 import type {
   AssistantMessageEventStreamLike,
@@ -131,8 +132,13 @@ export function createStreamCommandCode(deps: CoreDependencies) {
     const stream = deps.createStream()
 
     async function run() {
+      // OMP may pass the env-var name "COMMANDCODE_API_KEY" as the apiKey
+      // value instead of resolving it. Filter out this specific string.
+      const hostKey =
+        options?.apiKey && options.apiKey !== "COMMANDCODE_API_KEY" ? options.apiKey : undefined
+
       const apiKey =
-        options?.apiKey ??
+        hostKey ??
         getApiKey({
           env: deps.env,
           authPaths: deps.authPaths,
@@ -149,7 +155,7 @@ export function createStreamCommandCode(deps: CoreDependencies) {
           usage: defaultUsage(),
           stopReason: "error",
           errorMessage:
-            "No Command Code API key. Run /login and select Command Code, set COMMANDCODE_API_KEY env var, or configure ~/.commandcode/auth.json or ~/.pi/agent/auth.json.",
+            "No Command Code API key. Run /login and select Command Code, set the COMMANDCODE_API_KEY env var, or configure ~/.commandcode/auth.json, ~/.pi/agent/auth.json or ~/.omp/agent/auth.json",
           timestamp: now(),
         }
         stream.push({ type: "error", reason: "error", error: msg })
@@ -355,7 +361,7 @@ export function createStreamCommandCode(deps: CoreDependencies) {
             model: model.id,
             messages: messagesToCC(context.messages),
             tools: toolsToJson(context.tools),
-            system: context.systemPrompt ?? "",
+            system: systemPromptToText(context.systemPrompt),
             max_tokens: generateMaxTokens(model, options),
             temperature: 0.3,
             stream: true,
