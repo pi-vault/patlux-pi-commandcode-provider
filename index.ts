@@ -49,7 +49,7 @@ const MODEL_COSTS: Record<string, CommandCodeModelCost> = {
   "gpt-5.4-mini": { input: 0.75, output: 4.5, cacheRead: 0.075, cacheWrite: 0 },
   "google/gemini-3.5-flash": { input: 1.5, output: 9, cacheRead: 0.15, cacheWrite: 0 },
   "google/gemini-3.1-flash-lite": { input: 0.25, output: 1.5, cacheRead: 0.03, cacheWrite: 0 },
-  // 4× usage deal: 75% off through May 31, 2026
+  // 4× usage deal: 75% off (permanent, no expiry)
   "deepseek/deepseek-v4-pro": { input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0 },
   "deepseek/deepseek-v4-flash": { input: 0.14, output: 0.28, cacheRead: 0.01, cacheWrite: 0 },
   "moonshotai/Kimi-K2.6": { input: 0.95, output: 4, cacheRead: 0.16, cacheWrite: 0 },
