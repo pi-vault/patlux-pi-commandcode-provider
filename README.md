@@ -36,6 +36,18 @@ Then reload pi:
 /reload
 ```
 
+### Oh My Pi
+
+```sh
+omp plugin install pi-commandcode-provider
+```
+
+Then restart OMP or run:
+
+```txt
+/reload
+```
+
 ## Setup
 
 Set your Command Code API key using one of these methods:
@@ -83,7 +95,7 @@ The official Command Code CLI auth shape is also supported:
 }
 ```
 
-Or use pi's auth file at `~/.pi/agent/auth.json`:
+Or use a pi/OMP auth file at `~/.pi/agent/auth.json` or `~/.omp/agent/auth.json`:
 
 ```json
 {
@@ -99,11 +111,20 @@ After installing and setting your API key, select a Command Code model in pi:
 /model deepseek/deepseek-v4-flash
 ```
 
-Any query will then use the Command Code API. You can list available models within pi:
+Any query will then use the Command Code API. You can list available models:
 
-```txt
-/models
+```sh
+pi -e index.ts --list-models   # or /models within pi
+omp -e index.ts --list-models
 ```
+
+In OMP, use the provider-qualified model name:
+
+```sh
+omp -p "hello" --model commandcode/deepseek/deepseek-v4-flash
+```
+
+OMP currently resolves `--provider commandcode --model ...` before extension providers are loaded, so prefer `--model commandcode/<model-id>`. <!-- TODO: remove this note once OMP fixes provider resolution order for extension-loaded providers -->
 
 ## Model discovery
 

@@ -12,7 +12,7 @@
  * Models are fetched from Command Code's Provider API at startup.
  */
 
-import { calculateCost, createAssistantMessageEventStream } from "@earendil-works/pi-ai"
+import { AssistantMessageEventStream, calculateCost } from "@earendil-works/pi-ai"
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
 
 import { COMMAND_CODE_CLI_VERSION, createStreamCommandCode, DEFAULT_API_BASE } from "./src/core.ts"
@@ -68,7 +68,7 @@ const MODEL_COSTS: Record<string, CommandCodeModelCost> = {
 }
 
 const streamCommandCode = createStreamCommandCode({
-  createStream: createAssistantMessageEventStream,
+  createStream: () => new AssistantMessageEventStream(),
   calculateCost,
   apiBase: API_BASE,
 })
